@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,8 +33,6 @@ import java.util.regex.Pattern;
 
 import org.ebayopensource.turmeric.common.v1.types.AckValue;
 import org.ebayopensource.turmeric.manager.cassandra.server.CassandraTestManager;
-import org.ebayopensource.turmeric.rateLimiterCounterMapProviderImpl.RateLimiterCounterMapProviderImpl;
-import org.ebayopensource.turmeric.rateLimiterCounterProvider.RateLimiterCounterProvider;
 import org.ebayopensource.turmeric.security.v1.services.CreatePolicyRequest;
 import org.ebayopensource.turmeric.security.v1.services.CreatePolicyResponse;
 import org.ebayopensource.turmeric.security.v1.services.CreateResourcesRequest;
@@ -54,6 +51,7 @@ import org.ebayopensource.turmeric.security.v1.services.PolicyKey;
 import org.ebayopensource.turmeric.security.v1.services.Resource;
 import org.ebayopensource.turmeric.security.v1.services.Subject;
 import org.ebayopensource.turmeric.security.v1.services.SubjectGroup;
+import org.ebayopensource.turmeric.security.v1.services.SubjectGroupType;
 import org.ebayopensource.turmeric.security.v1.services.SubjectType;
 import org.ebayopensource.turmeric.services.ratelimiterservice.intf.gen.BaseRateLimiterServiceConsumer;
 import org.ebayopensource.turmeric.test.services.utils.FindPolicyHelper;
@@ -73,6 +71,7 @@ public class RatelimiterTests{
 	private String m_testCaseName;
 	private String m_resource;
 	private String m_subjects;
+	private String m_subjectGroup;
 	private String m_numOfHits;
 	private String m_expectedResult;
 	
@@ -80,6 +79,7 @@ public class RatelimiterTests{
 	
 	private String m_resourceRecall;
 	private String m_subjectsRecall;
+	private String m_subjectGroupRecall;
 	private String m_numOfHitsRecall;
 	private String m_expectedResultRecall;
 
@@ -126,11 +126,12 @@ public class RatelimiterTests{
 	}
 
 	public RatelimiterTests(final String testCaseName, 
-			final String resource, String subjects, final String numOfHits, final String expectedResult, final String secondCall, 
-			final String resourceRecall, String subjectsRecall, final String numOfHitsRecall, final String expectedResultRecall) {
+			final String resource, String subjects, final String subjectGroup, final String numOfHits, final String expectedResult, final String secondCall, 
+			final String resourceRecall, final String subjectsRecall, final String subjectGroupRecall, final String numOfHitsRecall, final String expectedResultRecall) {
 		this.m_testCaseName = testCaseName;
 		this.m_resource = resource;
 		this.m_subjects = subjects;
+		this.m_subjectGroup = subjectGroup;		
 		this.m_numOfHits = numOfHits;
 		this.m_expectedResult = expectedResult;
 		
@@ -138,6 +139,7 @@ public class RatelimiterTests{
 		
 		this.m_resourceRecall = resourceRecall;
 		this.m_subjectsRecall = subjectsRecall;
+		this.m_subjectGroupRecall = subjectGroupRecall;
 		this.m_numOfHitsRecall = numOfHitsRecall;
 		this.m_expectedResultRecall = expectedResultRecall;
 		
@@ -247,6 +249,7 @@ public class RatelimiterTests{
 				String testName = "testcase" + i + ".name";
 				String resource = "testcase" + i + ".request.resource";
 				String subjects = "testcase" + i + ".request.subject";
+				String subjectGroup = "testcase" + i + ".request.subjectGroup";
 				String numOfHits  = "testcase" + i + ".request.numofhits";
 				String expectedResult = "testcase" + i + ".response";
 
@@ -254,6 +257,7 @@ public class RatelimiterTests{
 				
 				String resourceRecall = "testcase" + i + ".request.resource.recall";
 				String subjectsRecall = "testcase" + i + ".request.subject.recall";
+				String subjectGroupRecall = "testcase" + i + ".request.subjectGroup.recall";
 				String numOfHitsRecall  = "testcase" + i + ".request.numofhits.recall";
 				String expectedResultRecall = "testcase" + i + ".response.recall";
 
@@ -261,6 +265,7 @@ public class RatelimiterTests{
 				eachRowData.add(props.getProperty(testName));
 				eachRowData.add(props.getProperty(resource));
 				eachRowData.add(props.getProperty(subjects));
+				eachRowData.add(props.getProperty(subjectGroup));
 				eachRowData.add(props.getProperty(numOfHits));
 				eachRowData.add(props.getProperty(expectedResult));
 
@@ -268,6 +273,7 @@ public class RatelimiterTests{
 
 				eachRowData.add(props.getProperty(resourceRecall));
 				eachRowData.add(props.getProperty(subjectsRecall));
+				eachRowData.add(props.getProperty(subjectGroupRecall));
 				eachRowData.add(props.getProperty(numOfHitsRecall));
 				eachRowData.add(props.getProperty(expectedResultRecall));
 				
@@ -313,6 +319,15 @@ public class RatelimiterTests{
 				subject.setDomain(subjType);
 				request.getSubject().add(subject);
 		}
+		if (m_subjectGroup !=null) {
+			SubjectGroupType subjectGroup = new SubjectGroupType();
+				StringTokenizer sgTokens = new StringTokenizer(m_subjectGroup, CONFIG_DELIMITER);
+				String sgType =getToken(sgTokens );
+				String sgName= getToken(sgTokens );
+				subjectGroup.setName(sgName);
+				subjectGroup.setDomain(sgType);
+				request.getResolvedSubjectGroup().add(subjectGroup);
+		}
 			 		
 	}
 
@@ -338,6 +353,16 @@ private void  constructIsRatelimiterSecondRequest(IsRateLimitedRequest request) 
 				subject.setValue(subjName);
 				subject.setDomain(subjType);
 				request.getSubject().add(subject);
+		}
+		
+		if (m_subjectGroupRecall !=null) {
+			SubjectGroupType subjectGroup = new SubjectGroupType();
+				StringTokenizer sgTokens = new StringTokenizer(m_subjectGroupRecall, CONFIG_DELIMITER);
+				String sgType =getToken(sgTokens );
+				String sgName= getToken(sgTokens );
+				subjectGroup.setName(sgName);
+				subjectGroup.setDomain(sgType);
+				request.getResolvedSubjectGroup().add(subjectGroup);
 		}
 			 		
 	}
